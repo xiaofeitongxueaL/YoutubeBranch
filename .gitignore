@@ -1,14 +1,19 @@
-# 排除所有 exe 文件 (主要是 ffmpeg)
-*.exe
-# 排除视频和音频
-*.mp4
-*.mp3
-*.m4a
-*.webm
-# 排除缓存和文件夹
+# 排除打包产生的垃圾
+build/
+dist/
+*.spec
+*.bat
+
+# 排除 Python 缓存
 __pycache__/
-venv/
-.vscode/
-# 排除 FFmpeg 所在的 bin 文件夹
+*.pyc
+
+# 排除 FFmpeg 所在的 bin
 bin/
 ffmpeg/
+
+# 排除下载的素材
+*.mp4
+*.mp3
+*.jpg
+config.json
