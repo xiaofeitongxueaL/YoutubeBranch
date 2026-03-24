@@ -80,3 +80,46 @@ class DownloaderEngine:
             return True
         except Exception as e:
             raise e
+    
+    def get_quick_info(self, url, config):
+        """抓取预览：强制只读第1项，绝不加载整个列表"""
+        proxy = config.get('last_proxy') if config.get('proxy_enabled') else None
+        if proxy and not proxy.startswith('http'):
+            proxy = f"http://{proxy}"
+
+        ydl_opts = {
+            'proxy': proxy,
+            'quiet': True,
+            'no_warnings': True,
+            'skip_download': True,
+            'socket_timeout': 5,             # 5秒强制超时
+            'nocheckcertificate': True,
+            'extract_flat': 'in_playlist',   # 只抓取列表元数据
+            'playlist_items': '1',           # 【核心】只抓取第1个视频，防止卡死
+            'lazy_playlist': True,           # 懒加载模式
+        }
+
+        try:
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                if not info: return None
+
+                # 处理列表/Mix 情况
+                if 'entries' in info or info.get('_type') == 'playlist':
+                    title = info.get('title', '未知列表')
+                    uploader = info.get('uploader') or info.get('uploader_id') or "YouTube Mix"
+                    return {
+                        'title': f"项目: {title}",
+                        'duration': "列表/混合频道",
+                        'uploader': uploader
+                    }
+
+                # 处理单个视频情况
+                return {
+                    'title': info.get('title', '未知标题'),
+                    'duration': self._format_seconds(info.get('duration')),
+                    'uploader': info.get('uploader') or info.get('channel') or "未知作者"
+                }
+        except Exception as e:
+            print(f"[DEBUG] 预览抓取崩溃: {str(e)}")
+            return None
