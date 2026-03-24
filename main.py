@@ -100,6 +100,20 @@ class YouTubeDownloaderPro(ctk.CTk):
         self.log_box = ctk.CTkTextbox(self, width=680, height=200, font=ctk.CTkFont(family="Consolas", size=11))
         self.log_box.grid(row=8, column=0, padx=20, pady=10)
 
+        # --- 新增：免责声明标签 (放在 row=9) ---
+        disclaimer_text = (
+            "免责声明：本工具仅供编程学习与个人测试使用。请遵守当地法律法规及 YouTube 服务条款，\n"
+            "严禁将下载内容用于未经授权的分发、商业盈利或传播至第三方平台。使用者因违规使用产生的任何法律责任由其自行承担。"
+        )
+        self.disclaimer_label = ctk.CTkLabel(
+            self, 
+            text=disclaimer_text, 
+            font=ctk.CTkFont(size=10), # 小字号
+            text_color="gray",         # 灰色，不显眼
+            justify="center"           # 居中显示
+        )
+        self.disclaimer_label.grid(row=9, column=0, padx=20, pady=(5, 15)) # 放在最底部，留出一点边距
+
     # --- UI 事件方法 ---
     def toggle_proxy(self):
         self.proxy_entry.configure(state="normal" if self.proxy_enabled_var.get() else "disabled")
