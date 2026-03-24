@@ -40,6 +40,12 @@ class DownloaderEngine:
             'merge_output_format': 'mp4',
             'postprocessors': [{'key': 'FFmpegVideoConvertor', 'preferedformat': 'mp4'}, {'key': 'FFmpegMetadata'}],
         }
+        browser = config.get('cookie_browser', "无")
+        if browser != "无":
+            # 这里的格式是 (浏览器名, 用户目录, 密码, 容器)
+            # 我们只需要传浏览器名，后面传 None 即可
+            opts['cookiesfrombrowser'] = (browser.lower(), None, None, None)
+            print(f"[DEBUG] 已注入浏览器 Cookie: {browser}")
 
         # 封面保存
         if config.get('thumb'):
@@ -97,7 +103,16 @@ class DownloaderEngine:
             'extract_flat': 'in_playlist',   # 只抓取列表元数据
             'playlist_items': '1',           # 【核心】只抓取第1个视频，防止卡死
             'lazy_playlist': True,           # 懒加载模式
+            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
+            # --- 补充：某些会员视频需要强制开启该选项 ---
+            'format_sort': ['res:1080', 'acodec:m4a'], 
+            
         }
+
+        browser = config.get('cookie_browser', "无")
+        if browser != "无":
+            ydl_opts['cookiesfrombrowser'] = (browser.lower(), None, None, None)
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:

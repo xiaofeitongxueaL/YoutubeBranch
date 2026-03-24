@@ -24,15 +24,29 @@ class MyLogger:
 class YouTubeDownloaderPro(ctk.CTk):
     def __init__(self):
         super().__init__()
-        # 2. 初始化配置管理
         self.cm = ConfigManager()
         self.conf = self.cm.config
 
-        self.title("YouTube 全能爬虫 Pro v4.4")
+        # --- 确保所有 UI 变量全部在这里定义 ---
+        self.download_path_var = ctk.StringVar(value=self.conf.get('last_path', ""))
+        self.proxy_addr_var = ctk.StringVar(value=self.conf.get('last_proxy', "http://127.0.0.1:7890"))
+        
+        self.proxy_enabled_var = ctk.BooleanVar(value=self.conf.get('proxy_enabled', False))
+        self.sub_var = ctk.BooleanVar(value=self.conf.get('sub', False))
+        self.audio_var = ctk.BooleanVar(value=self.conf.get('audio', False))
+        self.thumb_var = ctk.BooleanVar(value=self.conf.get('thumb', False))
+        self.shutdown_var = ctk.BooleanVar(value=self.conf.get('shutdown', False))
+        self.auto_paste_var = ctk.BooleanVar(value=self.conf.get('auto_paste', False))
+        
+        self.quality_var = ctk.StringVar(value=self.conf.get('quality', "最高画质"))
+        self.cookie_var = ctk.StringVar(value=self.conf.get('cookie_browser', "无"))
+        # --------------------------------------
+
+        self.title("YouTube 全能爬虫 Pro v4.5")
         self.geometry("750x920") 
         self.grid_columnconfigure(0, weight=1)
         
-        self.setup_ui() # 初始化 UI 布局
+        self.setup_ui()  # 现在执行这行，绝对不会报错了
         
         # 3. 初始化下载引擎 (注意：必须在 setup_ui 之后，因为需要 log_box)
         self.engine = DownloaderEngine(
@@ -84,24 +98,27 @@ class YouTubeDownloaderPro(ctk.CTk):
         self.proxy_entry.pack(side="left", padx=5)
         self.toggle_proxy()
 
-        # 开关区
         self.ctrl_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.ctrl_frame.grid(row=5, column=0, padx=20, pady=10)
-        self.sub_var = ctk.BooleanVar(value=self.conf.get('sub', False))
-        self.audio_var = ctk.BooleanVar(value=self.conf.get('audio', False))
-        self.thumb_var = ctk.BooleanVar(value=self.conf.get('thumb', False))
-        self.shutdown_var = ctk.BooleanVar(value=self.conf.get('shutdown', False))
 
-        ctk.CTkSwitch(self.ctrl_frame, text="内嵌字幕", variable=self.sub_var).pack(side="left", padx=5)
-        ctk.CTkSwitch(self.ctrl_frame, text="仅音频", variable=self.audio_var).pack(side="left", padx=5)
-        ctk.CTkSwitch(self.ctrl_frame, text="保存封面", variable=self.thumb_var).pack(side="left", padx=5)
-        ctk.CTkSwitch(self.ctrl_frame, text="任务完关机", variable=self.shutdown_var).pack(side="left", padx=5)
-        # 开关区 (原本已有内嵌字幕、仅音频等)
-        self.auto_paste_var = ctk.BooleanVar(value=self.conf.get('auto_paste', False))
-        ctk.CTkSwitch(self.ctrl_frame, text="自动识别链接", variable=self.auto_paste_var, progress_color="cyan").pack(side="left", padx=5)
+        # 第一行：使用局部变量 row1，不需要 self.row1
+        row1 = ctk.CTkFrame(self.ctrl_frame, fg_color="transparent")
+        row1.pack(fill="x", pady=5)
+        ctk.CTkSwitch(row1, text="内嵌字幕", variable=self.sub_var).pack(side="left", padx=10)
+        ctk.CTkSwitch(row1, text="仅音频", variable=self.audio_var).pack(side="left", padx=10)
+        ctk.CTkSwitch(row1, text="保存封面", variable=self.thumb_var).pack(side="left", padx=10)
+        ctk.CTkSwitch(row1, text="任务完关机", variable=self.shutdown_var).pack(side="left", padx=10)
 
-        self.quality_var = ctk.StringVar(value=self.conf.get('quality', "最高画质"))
-        ctk.CTkOptionMenu(self.ctrl_frame, values=["最高画质", "2160p (4K)", "1440p (2K)", "1080p", "720p"], variable=self.quality_var, width=120).pack(side="left", padx=5)
+        # 第二行：使用局部变量 row2，不需要 self.row2
+        row2 = ctk.CTkFrame(self.ctrl_frame, fg_color="transparent")
+        row2.pack(fill="x", pady=5)
+        ctk.CTkSwitch(row2, text="自动识别链接", variable=self.auto_paste_var, progress_color="cyan").pack(side="left", padx=10)
+        
+        ctk.CTkLabel(row2, text="画质:").pack(side="left", padx=(10, 2))
+        ctk.CTkOptionMenu(row2, values=["最高画质", "2160p (4K)", "1080p", "720p"], variable=self.quality_var, width=100).pack(side="left", padx=5)
+        
+        ctk.CTkLabel(row2, text="Cookie:").pack(side="left", padx=(10, 2))
+        ctk.CTkOptionMenu(row2, values=["无", "chrome", "edge", "firefox"], variable=self.cookie_var, width=100).pack(side="left", padx=5)
 
         # 下载按钮
         self.download_btn = ctk.CTkButton(self, text="🚀 开启全能爬取模式", height=50, command=self.start_batch_download, font=ctk.CTkFont(size=18, weight="bold"))
@@ -259,6 +276,7 @@ class YouTubeDownloaderPro(ctk.CTk):
             "shutdown": self.shutdown_var.get(), 
             "quality": self.quality_var.get(),
             "auto_paste": self.auto_paste_var.get(),
+            "cookie_browser": self.cookie_var.get(),
         }
         self.cm.save_config(new_data)
 

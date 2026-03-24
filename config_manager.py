@@ -31,7 +31,8 @@ class ConfigManager:
             "audio": False, 
             "thumb": False, 
             "shutdown": False, 
-            "quality": "最高画质"
+            "quality": "最高画质",
+            "cookie_browser":"无"
         }
         
         if os.path.exists(self.config_file):
