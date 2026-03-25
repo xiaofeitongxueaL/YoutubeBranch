@@ -64,15 +64,26 @@ class DownloaderEngine:
             opts['format'] = q_map.get(config.get('quality'), "bestvideo+bestaudio/best")
             # 字幕逻辑
             if is_sub:
+                # 1. 广谱语言捕获：把所有可能的中文代号全加上，确保 100% 命中
+                # 按照优先级排列，yt-dlp 会自动挑最好的嵌进去
+                lang_list = ['zh-Hans', 'zh-CN', 'zh-TW', 'zh-Hant', 'zh', 'en']
+
                 opts.update({
                     'writesubtitles': True, 
                     'writeautomaticsub': True, 
-                    'subtitleslangs': ['zh-Hans', 'en'], 
-                    'embedsubs': True
+                    'subtitleslangs': lang_list,
+                    'embedsubs': True,  # 坚持你的原方案：必须内嵌！
+                
+                    # 【新增防错机制】：嵌完字幕后清理临时文件，防止缓存冲突
+                    'compat_opts': ['no-keep-subs'], 
                 })
+            
+                    # 2. 严格的后处理顺序：必须先强制转为 srt，再执行内嵌
                 opts['postprocessors'].extend([
+                    # 第一步：把抓到的任何乱七八糟格式的字幕，统统转成标准的 srt
                     {'key': 'FFmpegSubtitlesConvertor', 'format': 'srt'}, 
-                    {'key': 'FFmpegEmbedSubtitle'}
+                    # 第二步：调用 FFmpeg 强行把 srt 塞进 mp4 容器里
+                    {'key': 'FFmpegEmbedSubtitle', 'already_have_subtitle': False}
                 ])
         
         return opts
@@ -86,55 +97,3 @@ class DownloaderEngine:
             return True
         except Exception as e:
             raise e
-    
-    def get_quick_info(self, url, config):
-        """抓取预览：强制只读第1项，绝不加载整个列表"""
-        proxy = config.get('last_proxy') if config.get('proxy_enabled') else None
-        if proxy and not proxy.startswith('http'):
-            proxy = f"http://{proxy}"
-
-        ydl_opts = {
-            'proxy': proxy,
-            'quiet': True,
-            'no_warnings': True,
-            'skip_download': True,
-            'socket_timeout': 5,             # 5秒强制超时
-            'nocheckcertificate': True,
-            'extract_flat': 'in_playlist',   # 只抓取列表元数据
-            'playlist_items': '1',           # 【核心】只抓取第1个视频，防止卡死
-            'lazy_playlist': True,           # 懒加载模式
-            'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'cookiefile': 'cookies.txt' if os.path.exists('cookies.txt') else None,
-            # --- 补充：某些会员视频需要强制开启该选项 ---
-            'format_sort': ['res:1080', 'acodec:m4a'], 
-            
-        }
-
-        browser = config.get('cookie_browser', "无")
-        if browser != "无":
-            ydl_opts['cookiesfrombrowser'] = (browser.lower(), None, None, None)
-
-        try:
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                if not info: return None
-
-                # 处理列表/Mix 情况
-                if 'entries' in info or info.get('_type') == 'playlist':
-                    title = info.get('title', '未知列表')
-                    uploader = info.get('uploader') or info.get('uploader_id') or "YouTube Mix"
-                    return {
-                        'title': f"项目: {title}",
-                        'duration': "列表/混合频道",
-                        'uploader': uploader
-                    }
-
-                # 处理单个视频情况
-                return {
-                    'title': info.get('title', '未知标题'),
-                    'duration': self._format_seconds(info.get('duration')),
-                    'uploader': info.get('uploader') or info.get('channel') or "未知作者"
-                }
-        except Exception as e:
-            print(f"[DEBUG] 预览抓取崩溃: {str(e)}")
-            return None

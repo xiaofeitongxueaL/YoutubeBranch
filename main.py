@@ -71,14 +71,6 @@ class YouTubeDownloaderPro(ctk.CTk):
         # 批量输入
         self.url_text = ctk.CTkTextbox(self, width=680, height=100)
         self.url_text.grid(row=2, column=0, padx=20, pady=5)
-
-        self.preview_label = ctk.CTkLabel(
-            self, 
-            text="✨ 等待识别链接信息...", 
-            font=ctk.CTkFont(size=12), 
-            text_color="#3498db"
-        )
-        self.preview_label.grid(row=2, column=0, sticky="se", padx=30, pady=(0, 10)) # 放在输入框右下角
         
         # 路径选择
         self.path_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -173,68 +165,21 @@ class YouTubeDownloaderPro(ctk.CTk):
         top.after(5000, top.destroy)
     
     def monitor_clipboard(self):
-        """高精度监测剪贴板：只识别纯正的 YouTube 视频链接"""
+        """极速监测剪贴板：只填入链接，不请求网络"""
         if self.auto_paste_var.get():
             try:
-                # 1. 获取并清洗剪贴板文字
                 clip_text = self.clipboard_get().strip()
-                
-                # 2. 定义【最严苛】的 YouTube 链接匹配正则
-                # 支持：标准链接、短链接 (youtu.be)、Shorts 短视频链接
                 yt_pattern = r"^(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[a-zA-Z0-9_-]{11}"
-                
-                # 3. 使用 re.match 确保是从开头就完全匹配，防止识别代码中的片段
+            
                 if re.match(yt_pattern, clip_text):
                     current_text = self.url_text.get("0.0", "end").strip()
-                    
-                    # 4. 去重判断：如果输入框里已经有了，就不重复填入
                     if clip_text not in current_text:
-                        # 确保链接单独占一行
                         self.url_text.insert("end", clip_text + "\n")
-                        self.status_label.configure(text="📋 识别到 YouTube 视频，已自动添加", text_color="cyan")
-                        
-                        # 5. 触发视频信息抓取
-                        self.fetch_video_preview(clip_text)
-                        
-                        # 3秒后恢复状态文字
+                        self.status_label.configure(text="📋 已自动添加链接，准备下载", text_color="cyan")
                         self.after(3000, lambda: self.status_label.configure(text="准备就绪", text_color="white"))
             except Exception:
                 pass
-        
-        # 维持 1.5 秒的轮询
-        self.after(1500, self.monitor_clipboard)
-
-    def fetch_video_preview(self, url):
-        """预览抓取：增加自动兜底计时器"""
-        # 1. 立即显示解析中
-        self.after(0, lambda: self.preview_label.configure(text="🔍 正在快速解析中...", text_color="yellow"))
-
-        # 2. 【核心新增】设定一个 6 秒后的“强行变红”定时器
-        # 如果 6 秒后标签还是黄的，说明后台挂了，直接显示失败
-        def force_error():
-            if self.preview_label.cget("text_color") == "yellow":
-                self.preview_label.configure(text="❌ 解析超时：请检查代理设置或链接", text_color="#e74c3c")
-
-        self.after(6000, force_error)
-
-        def task():
-            try:
-                current_config = {
-                    'proxy_enabled': self.proxy_enabled_var.get(),
-                    'last_proxy': self.proxy_addr_var.get()
-                }
-                info = self.engine.get_quick_info(url, current_config)
-                
-                if info:
-                    msg = f"预览：【{info['title']}】 | {info['duration']} | {info['uploader']}"
-                    self.after(0, lambda: self.preview_label.configure(text=msg, text_color="#2ecc71"))
-                else:
-                    self.after(0, lambda: self.preview_label.configure(text="❌ 解析失败：YouTube 拒绝了请求", text_color="#e74c3c"))
-            except Exception:
-                self.after(0, lambda: self.preview_label.configure(text="🚨 程序异常：请重启软件", text_color="red"))
-
-        threading.Thread(target=task, daemon=True).start()
-
+        self.after(1500, self.monitor_clipboard)        
     # --- UI 事件方法 ---
     def toggle_proxy(self):
         self.proxy_entry.configure(state="normal" if self.proxy_enabled_var.get() else "disabled")
